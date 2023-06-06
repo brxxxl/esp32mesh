@@ -4,7 +4,7 @@
 // Instalar a AsyncTCP.h pelo PlatformIO/ArduinoIDE
 
 #define MSGS		// Para imprimir as mensagens de recepção e envio de dados
-#define DEBUG		// Para inicializar no modo debug
+#define DEBUG		// Para inicializar no modo debug, imprimindo as mensagens de inicialização e de alteração de conexões
 //#define DEBUGMSG	// Para imprimir as mensagens de debug da biblioteca painlessMesh
 
 // MESH Details
@@ -21,7 +21,7 @@ painlessMesh mesh;
 void sendMessage();		// Protótipo para que o PlatformIO não reclame
 String getReadings();	// Protótipo para que o PlatformIO não reclame
 
-// Cria as tasks para enviar mensagens e fazer as medições
+// Cria as tasks para enviar mensagens e fazer as medições a cada 5 segundos
 Task taskSendMessage(TASK_SECOND * 5 , TASK_FOREVER, &sendMessage);
 
 // Identificação do node
@@ -32,7 +32,8 @@ unsigned long start_time;
 unsigned long timed_event;
 unsigned long current_time;
 
-long media (int size, int pin) { // Calcula a média de leituras de um sensor analógico no pino definido pelo usuário
+// Calcula a média de leituras de um sensor analógico no pino definido pelo usuário
+long media (int size, int pin) {
 	long val = 0;	// Variável para armazenar a soma das leituras e calcular a média
 
 	for (int i = 0; i < size; i++){
@@ -43,6 +44,7 @@ long media (int size, int pin) { // Calcula a média de leituras de um sensor an
 	return val;
 }
 
+// Retorna as leituras dos sensores em formato JSON
 String getReadings () {
 	JSONVar jsonReadings;
 	jsonReadings["node"] = nodeNumber;
@@ -53,14 +55,15 @@ String getReadings () {
 	return readings;
 }
 
+// Realiza e envia as leituras dos sensores para a rede MESH
 void sendMessage () {
 	String msg = getReadings();
 	mesh.sendBroadcast(msg);
 }
 
-// Needed for painless library
+// Imprime no serial as mensagens enviadas pela rede MESH
 void receivedCallback( uint32_t from, String &msg ) {
-	#ifdef DEBUG
+	#ifdef MSGS
 		Serial.printf("Received from %u: %s\n", from, msg.c_str());
 	#endif
 	JSONVar myObject = JSON.parse(msg.c_str());
@@ -70,53 +73,56 @@ void receivedCallback( uint32_t from, String &msg ) {
 	int pres = myObject["pres"];
 }
 
+// Callbacks de nova conexão para debug
 void newConnectionCallback(uint32_t nodeId) {
-	#ifdef MSGS
+	#ifdef DEBUG
 		Serial.printf("New Connection, nodeId = %u\n", nodeId);
 	#endif
 }
 
+// Callbacks de alteração de conexão para debug
 void changedConnectionCallback() {
-	#ifdef MSGS
+	#ifdef DEBUG
 		Serial.printf("Changed connections\n");
 	#endif
 }
 
+// Callbacks de ajuste de tempo para debug
 void nodeTimeAdjustedCallback(int32_t offset) {
-	#ifdef MSGS
+	#ifdef DEBUG
 		Serial.printf("Adjusted time %u. Offset = %d\n", mesh.getNodeTime(),offset);
 	#endif
 }
 
+// Inicializa o node
 void setup() {
-
 	timed_event = 5000;
 	current_time = millis();
 	start_time = current_time;
-	
 	Serial.begin(9600);
 
+	// Definição das mensagens de debug da biblioteca painlessMesh
 	#ifdef DEBUGMSG
 		mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); // all types on
 	#endif
 	#ifndef DEBUGMSG
-		mesh.setDebugMsgTypes( ERROR | STARTUP );  // set before init() so that you can see startup messages
+		mesh.setDebugMsgTypes( ERROR | STARTUP );
 	#endif
 
-	mesh.init( MESH_PREFIX, MESH_PASSWORD, &userScheduler, MESH_PORT );
-	mesh.onReceive(&receivedCallback);
-	mesh.onNewConnection(&newConnectionCallback);
-	mesh.onChangedConnections(&changedConnectionCallback);
-	mesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
+	mesh.init( MESH_PREFIX, MESH_PASSWORD, &userScheduler, MESH_PORT );	// Inicialização da rede MESH
+	mesh.onReceive(&receivedCallback);									// Callback para receber mensagens
+	mesh.onNewConnection(&newConnectionCallback);						// Callback para nova conexão
+	mesh.onChangedConnections(&changedConnectionCallback);				// Callback para alteração de conexão
+	mesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);					// Callback para ajuste de tempo
 
-	userScheduler.addTask(taskSendMessage);
-	taskSendMessage.enable();
-	nid = mesh.getNodeId();
+	userScheduler.addTask(taskSendMessage);	// Adiciona a task de envio de mensagens a cada 5 segundos
+	taskSendMessage.enable();				// Habilita a task de envio de mensagens
+	nid = mesh.getNodeId();					// Pega o ID deste node na rede MESH
 }
 
+// Loop principal
 void loop() {
-	getReadings();
-	
+	mesh.update();
 	current_time = millis();
 	if (current_time - start_time >= timed_event) {
 		Serial.printf("Sent by this node(%u): ",nid);
@@ -124,5 +130,4 @@ void loop() {
 		Serial.println();
 		start_time = current_time;
 	}
-	mesh.update();
 }
