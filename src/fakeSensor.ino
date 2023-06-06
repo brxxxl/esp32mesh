@@ -1,48 +1,44 @@
-#include "painlessMesh.h"
-#include <Arduino_JSON.h> // original
-//#include "Arduino_JSON.h" // testado e tbem nao funciona
+#include "painlessMesh.h" // Instalar essa biblioteca pelo PlatformIO/ArduinoIDE
+#include <Arduino_JSON.h> // Instalar essa biblioteca pelo PlatformIO/ArduinoIDE (na IDE vem por padrão a ArduinoJSON SEM UNDERLINE)
+// Instalar a TaskScheduler.h pelo PlatformIO/ArduinoIDE
+// Instalar a AsyncTCP.h pelo PlatformIO/ArduinoIDE
 
-#define MSGS
-#define DEBUG
-//#define DEBUGMSG
+#define MSGS		// Para imprimir as mensagens de recepção e envio de dados
+#define DEBUG		// Para inicializar no modo debug
+//#define DEBUGMSG	// Para imprimir as mensagens de debug da biblioteca painlessMesh
 
 // MESH Details
-#define   MESH_PREFIX     "RNTMESH" //name for your MESH
-#define   MESH_PASSWORD   "MESHpassword" //password for your MESH
-#define   MESH_PORT       5555 //default port
+#define MESH_PREFIX "RNTMESH"			// Nome da rede MESH
+#define MESH_PASSWORD "MESHpassword"	// Senha para rede MESH
+#define MESH_PORT 5555					// Porta padrão
 
-//String to send to other nodes with sensor readings
-String readings;
+String readings; // String com as leituras dos sensores
 
-Scheduler userScheduler; // to control your personal task
-painlessMesh  mesh;
+Scheduler userScheduler; // Para o controle da task principal
+painlessMesh mesh;
 
 // User stub
-void sendMessage() ; // Prototype so PlatformIO doesn't complain
-String getReadings(); // Prototype for sending sensor readings
+void sendMessage();		// Protótipo para que o PlatformIO não reclame
+String getReadings();	// Protótipo para que o PlatformIO não reclame
 
-//Create tasks: to send messages and get readings;
+// Cria as tasks para enviar mensagens e fazer as medições
 Task taskSendMessage(TASK_SECOND * 5 , TASK_FOREVER, &sendMessage);
 
-//Number for this node
-uint32_t nodeNumber = 1;
-unsigned int nid = 0;
+// Identificação do node
+uint32_t nodeNumber = 1;	// O número arbitrário deste node na rede MESH
+unsigned int nid = 0;		// O ID deste node na rede MESH, gerado pelo painlessMesh
 
-unsigned long start_time; 
+unsigned long start_time;
 unsigned long timed_event;
 unsigned long current_time;
 
-long media (int size, int pin) {
-	long vec[size];
-	long val = 0;
+long media (int size, int pin) { // Calcula a média de leituras de um sensor analógico no pino definido pelo usuário
+	long val = 0;	// Variável para armazenar a soma das leituras e calcular a média
 
 	for (int i = 0; i < size; i++){
-		vec[i] = analogRead(pin);
+		val += analogRead(pin);
 	}
 
-	for (int i = 0; i < size; i++){
-		val += vec[i];
-	}
 	val = val/size;
 	return val;
 }
