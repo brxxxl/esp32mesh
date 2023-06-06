@@ -103,9 +103,11 @@ void setup() {
 
 	// Definição das mensagens de debug da biblioteca painlessMesh
 	#ifdef DEBUGMSG
-		mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); // all types on
+		// Liga todas as mensagens de debug
+		mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE );
 	#endif
 	#ifndef DEBUGMSG
+		// Liga apenas as mensagens de erro e de inicialização
 		mesh.setDebugMsgTypes( ERROR | STARTUP );
 	#endif
 
@@ -122,12 +124,12 @@ void setup() {
 
 // Loop principal
 void loop() {
-	mesh.update();
-	current_time = millis();
+	mesh.update();				// Atualiza a rede MESH
+	current_time = millis();	// Define o tempo atual
 	if (current_time - start_time >= timed_event) {
-		Serial.printf("Sent by this node(%u): ",nid);
-		Serial.print(readings);
+		Serial.printf("Sent by this node(%u): ",nid);	// Imprime no serial o ID deste node
+		Serial.print(readings);							// Imprime no serial as leituras dos sensores
 		Serial.println();
-		start_time = current_time;
+		start_time = current_time;	// Atualiza o tempo inicial
 	}
 }
