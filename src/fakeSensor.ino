@@ -48,8 +48,8 @@ long media (int size, int pin) {
 String getReadings () {
 	JSONVar jsonReadings;
 	jsonReadings["node"] = nodeNumber;
-	jsonReadings["temp"] = media(25,36);
-	jsonReadings["hum"] = media(25,39);
+	jsonReadings["temp"] = media(25,39);
+	jsonReadings["pot"] = media(25,36);
 	jsonReadings["pres"] = random(0,100);
 	readings = JSON.stringify(jsonReadings);
 	return readings;
